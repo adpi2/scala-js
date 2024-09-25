@@ -1,6 +1,6 @@
 package build
 
-import sbt._
+import sbt.{ given, _ }
 import Keys._
 import Def.SettingsDefinition
 
@@ -21,7 +21,7 @@ final class MultiScalaProject private (private val projects: Map[String, Project
     def classpathDependency(d: ScopedMultiScalaProject) =
       strictMapValues(d.project.projects)(ClasspathDependency(_, d.configuration))
 
-    val depsByVersion: Map[String, Seq[ClasspathDependency]] =
+    val depsByVersion =
       strictMapValues(deps.flatMap(classpathDependency).groupBy(_._1))(_.map(_._2))
     zipped(depsByVersion)(_.dependsOn(_: _*))
   }

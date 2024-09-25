@@ -254,17 +254,9 @@ object ScalaJSPlugin extends AutoPlugin {
         "The JSEnv.Inputs to give to the jsEnv for tasks such as `run` and `test`",
         BTask)
 
-    val scalaJSSourceFiles = AttributeKey[Seq[File]]("scalaJSSourceFiles",
-        "Files used to compute this value (can be used in FileFunctions later).",
-        KeyRanks.Invisible)
-
-    val scalaJSSourceMap = AttributeKey[File]("scalaJSSourceMap",
-        "Source map file attached to an Attributed .js file.",
-        BSetting)
-
-    val scalaJSModuleKind = AttributeKey[ModuleKind]("scalaJSModuleKind",
-        "ModuleKind attached to an Attributed .js file.",
-        BSetting)
+    val scalaJSSourceFiles = StringAttributeKey("scalaJSSourceFiles")
+    val scalaJSSourceMap = StringAttributeKey("scalaJSSourceMap")
+    val scalaJSModuleKind = StringAttributeKey("scalaJSModuleKind")
 
     val scalaJSTestHTMLArtifactDirectory = SettingKey[File]("scalaJSTestHTMLArtifactDirectory",
         "Directory for artifacts produced by testHtml.",
@@ -273,6 +265,7 @@ object ScalaJSPlugin extends AutoPlugin {
     val scalaJSLinkerOutputDirectory = SettingKey[File]("scalaJSLinkerOutputDirectory",
         "Directory for linker output.",
         BSetting)
+    val scalaJSLinkerOutputDirectoryStr = StringAttributeKey("scalaJSLinkerOutputDirectory")
 
     /** Factory for logger (used to intercept timing in Scala.js core)
      *
@@ -293,7 +286,7 @@ object ScalaJSPlugin extends AutoPlugin {
 
         scalaJSLinkerConfig := StandardConfig(),
 
-        dependencyResolution in scalaJSLinkerImpl := {
+        scalaJSLinkerImpl / dependencyResolution := {
           val log = streams.value.log
 
           /* We first try to use the dependencyResolution of the root project
@@ -303,7 +296,7 @@ object ScalaJSPlugin extends AutoPlugin {
            * `dependencyResolution` won't be set, and this will be None.
            */
           val rootDependencyResolution =
-            (dependencyResolution in LocalRootProject).?.value
+            (LocalRootProject / dependencyResolution).?.value
 
           /* In case the above is None, fall back to something reasonable, and
            * warn.
@@ -328,21 +321,24 @@ object ScalaJSPlugin extends AutoPlugin {
 
         scalaJSLinkerImplBox := new CacheBox,
 
-        fullClasspath in scalaJSLinkerImpl := {
+        scalaJSLinkerImpl / fullClasspath := {
           val s = streams.value
           val log = s.log
           val retrieveDir = s.cacheDirectory / "scalajs-linker" / scalaJSVersion
-          val lm = (dependencyResolution in scalaJSLinkerImpl).value
+          val lm = (scalaJSLinkerImpl / dependencyResolution).value
+          val c = fileConverter.value
           lm.retrieve(
               "org.scala-js" % "scalajs-linker_2.12" % scalaJSVersion,
               scalaModuleInfo = None, retrieveDir, log)
-            .fold(w => throw w.resolveException, Attributed.blankSeq(_))
+            .fold(w => throw w.resolveException, fs => Attributed.blankSeq(fs.map(f => c.toVirtualFile(f.toPath))))
         },
 
         scalaJSLinkerImpl := {
-          val linkerImplClasspath = (fullClasspath in scalaJSLinkerImpl).value
+          val cp = (scalaJSLinkerImpl / fullClasspath).value
+          val c = fileConverter.value
+          val linkerImplClasspath = Attributed.data(cp).map(c.toPath(_).toFile)
           scalaJSLinkerImplBox.value.ensure {
-            LinkerImpl.reflect(Attributed.data(linkerImplClasspath))
+            LinkerImpl.reflect(linkerImplClasspath)
           }
         },
 

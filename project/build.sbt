@@ -1,19 +1,19 @@
-addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.9.0")
+// addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.9.0")
 
-addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "0.8.1")
+// addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "0.8.1")
 
-addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "1.0.0")
+// addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "1.0.0")
 
-addSbtPlugin("org.portable-scala" % "sbt-platform-deps" % "1.0.2")
+// addSbtPlugin("org.portable-scala" % "sbt-platform-deps" % "1.0.2")
 
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.0-SNAPSHOT")
 
 libraryDependencies += "com.google.jimfs" % "jimfs" % "1.1"
 
 libraryDependencies += "org.eclipse.jgit" % "org.eclipse.jgit.pgm" % "3.2.0.201312181205-r"
 
-libraryDependencies += "org.scala-js" %% "scalajs-js-envs" % "1.4.0"
-libraryDependencies += "org.scala-js" %% "scalajs-env-nodejs" % "1.4.0"
+libraryDependencies += "org.scala-js" %% "scalajs-js-envs" % "1.4.0" cross CrossVersion.for3Use2_13
+libraryDependencies += "org.scala-js" %% "scalajs-env-nodejs" % "1.4.0" cross CrossVersion.for3Use2_13
 
 Compile / unmanagedSourceDirectories ++= {
   val root = baseDirectory.value.getParentFile

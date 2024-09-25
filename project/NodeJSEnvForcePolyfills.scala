@@ -24,11 +24,11 @@ final class NodeJSEnvForcePolyfills(esVersion: ESVersion, config: NodeJSEnv.Conf
   }
 
   def start(input: Seq[Input], runConfig: RunConfig): JSRun =
-    nodeJSEnv.start(forcePolyfills +: input, runConfig)
+    nodeJSEnv.start(forcePolyfills() +: input, runConfig)
 
   def startWithCom(input: Seq[Input], runConfig: RunConfig,
       onMessage: String => Unit): JSComRun = {
-    nodeJSEnv.startWithCom(forcePolyfills +: input, runConfig, onMessage)
+    nodeJSEnv.startWithCom(forcePolyfills() +: input, runConfig, onMessage)
   }
 
   /** File to force all our ES 2015 polyfills to be used, by deleting the

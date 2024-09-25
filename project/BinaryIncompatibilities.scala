@@ -1,53 +1,53 @@
-package build
+// package build
 
-import com.typesafe.tools.mima.core._
-import com.typesafe.tools.mima.core.ProblemFilters._
+// import com.typesafe.tools.mima.core._
+// import com.typesafe.tools.mima.core.ProblemFilters._
 
-object BinaryIncompatibilities {
-  val IR = Seq(
-    // !!! Breaking, OK in minor release
+// object BinaryIncompatibilities {
+//   val IR = Seq(
+//     // !!! Breaking, OK in minor release
 
-    ProblemFilters.exclude[IncompatibleResultTypeProblem]("org.scalajs.ir.Trees#*.tpe"),
+//     ProblemFilters.exclude[IncompatibleResultTypeProblem]("org.scalajs.ir.Trees#*.tpe"),
 
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.this"),
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.apply"),
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.copy"),
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.this"),
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.apply"),
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.copy"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.this"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.apply"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ClassType.copy"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.this"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.apply"),
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.ir.Types#ArrayType.copy"),
 
-    ProblemFilters.exclude[MissingTypesProblem]("org.scalajs.ir.Types$ClassType$"),
-    ProblemFilters.exclude[MissingTypesProblem]("org.scalajs.ir.Types$ArrayType$"),
+//     ProblemFilters.exclude[MissingTypesProblem]("org.scalajs.ir.Types$ClassType$"),
+//     ProblemFilters.exclude[MissingTypesProblem]("org.scalajs.ir.Types$ArrayType$"),
 
-    // New abstract member in sealed hierarchy, not an issue
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("org.scalajs.ir.Types#Type.toNonNullable"),
-  )
+//     // New abstract member in sealed hierarchy, not an issue
+//     ProblemFilters.exclude[ReversedMissingMethodProblem]("org.scalajs.ir.Types#Type.toNonNullable"),
+//   )
 
-  val Linker = Seq(
-    // private, not an issue
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.linker.standard.CoreSpec.this"),
+//   val Linker = Seq(
+//     // private, not an issue
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.linker.standard.CoreSpec.this"),
 
-    // private[linker], not an issue
-    ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.linker.standard.CoreSpec.apply"),
-  )
+//     // private[linker], not an issue
+//     ProblemFilters.exclude[DirectMissingMethodProblem]("org.scalajs.linker.standard.CoreSpec.apply"),
+//   )
 
-  val LinkerInterface = Seq(
-  )
+//   val LinkerInterface = Seq(
+//   )
 
-  val SbtPlugin = Seq(
-  )
+//   val SbtPlugin = Seq(
+//   )
 
-  val TestAdapter = Seq(
-  )
+//   val TestAdapter = Seq(
+//   )
 
-  val Library = Seq(
-    // New abstract member in JS trait, not an issue
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("scala.scalajs.runtime.LinkingInfo.isWebAssembly"),
-  )
+//   val Library = Seq(
+//     // New abstract member in JS trait, not an issue
+//     ProblemFilters.exclude[ReversedMissingMethodProblem]("scala.scalajs.runtime.LinkingInfo.isWebAssembly"),
+//   )
 
-  val TestInterface = Seq(
-  )
+//   val TestInterface = Seq(
+//   )
 
-  val JUnitRuntime = Seq(
-  )
-}
+//   val JUnitRuntime = Seq(
+//   )
+// }
