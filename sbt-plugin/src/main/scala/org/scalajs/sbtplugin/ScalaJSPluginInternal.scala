@@ -24,7 +24,7 @@ import scala.util.control.NonFatal
 import java.io.{InputStream, OutputStream}
 import java.util.concurrent.atomic.AtomicReference
 
-import sbt._
+import sbt.{given, _}
 import sbt.Keys._
 import sbt.complete.DefaultParsers._
 
@@ -181,7 +181,7 @@ private[sbtplugin] object ScalaJSPluginInternal {
       key / usesScalaJSLinkerTag := (legacyKey / usesScalaJSLinkerTag).value,
 
       // Prevent this linker from being used concurrently
-      concurrentRestrictions in Global +=
+      Global / concurrentRestrictions +=
         Tags.limit((key / usesScalaJSLinkerTag).value, 1),
 
       key / scalaJSModuleInitializersFingerprints :=
@@ -570,65 +570,71 @@ private[sbtplugin] object ScalaJSPluginInternal {
               "scalaJSUseMainModuleInitializer := true")
         }
 
+        val service = bgJobService.value
         val log = streams.value.log
         val env = jsEnv.value
+        val ev = (run / envVars).value
+        val loggerFactory = scalaJSLoggerFactory.value
 
         val className = mainClass.value.getOrElse("<unknown class>")
         log.info(s"Running $className.")
         log.debug(s"with JSEnv ${env.name}")
 
         val input = jsEnvInput.value
+        val scoped = resolvedScoped.value
+        val handle = service.runInBackground(scoped, state.value) { (log, workingDir) =>
+          /* The list of threads that are piping output to System.out and
+          * System.err. This is not an AtomicReference or any other thread-safe
+          * structure because:
+          * - `onOutputStream` is guaranteed to be called exactly once, and
+          * - `pipeOutputThreads` is only read once the run is completed
+          *   (although the JSEnv interface does not explicitly specify that the
+          *   call to `onOutputStream must happen before that, anything else is
+          *   just plain unreasonable).
+          * We only mark it as `@volatile` to ensure that there is an
+          * appropriate memory barrier between writing to it and reading it back.
+          */
+          @volatile var pipeOutputThreads: List[Thread] = Nil
 
-        /* The list of threads that are piping output to System.out and
-         * System.err. This is not an AtomicReference or any other thread-safe
-         * structure because:
-         * - `onOutputStream` is guaranteed to be called exactly once, and
-         * - `pipeOutputThreads` is only read once the run is completed
-         *   (although the JSEnv interface does not explicitly specify that the
-         *   call to `onOutputStream must happen before that, anything else is
-         *   just plain unreasonable).
-         * We only mark it as `@volatile` to ensure that there is an
-         * appropriate memory barrier between writing to it and reading it back.
-         */
-        @volatile var pipeOutputThreads: List[Thread] = Nil
+          /* #4560 Explicitly redirect out/err to System.out/System.err, instead
+          * of relying on `inheritOut` and `inheritErr`, so that streams
+          * installed with `System.setOut` and `System.setErr` are always taken
+          * into account. sbt installs such alternative outputs when it runs in
+          * server mode.
+          */
+          val config = RunConfig()
+            .withLogger(loggerFactory(log))
+            .withEnv(ev)
+            .withInheritOut(false)
+            .withInheritErr(false)
+            .withOnOutputStream { (out, err) =>
+              pipeOutputThreads = (
+                out.map(PipeOutputThread.start(_, System.out)).toList :::
+                err.map(PipeOutputThread.start(_, System.err)).toList
+              )
+            }
 
-        /* #4560 Explicitly redirect out/err to System.out/System.err, instead
-         * of relying on `inheritOut` and `inheritErr`, so that streams
-         * installed with `System.setOut` and `System.setErr` are always taken
-         * into account. sbt installs such alternative outputs when it runs in
-         * server mode.
-         */
-        val config = RunConfig()
-          .withLogger(scalaJSLoggerFactory.value(log))
-          .withEnv((run / envVars).value)
-          .withInheritOut(false)
-          .withInheritErr(false)
-          .withOnOutputStream { (out, err) =>
-            pipeOutputThreads = (
-              out.map(PipeOutputThread.start(_, System.out)).toList :::
-              err.map(PipeOutputThread.start(_, System.err)).toList
-            )
+          try {
+            val run = env.start(input, config)
+
+            enhanceNotInstalledException(scoped, log) {
+              Await.result(run.future, Duration.Inf)
+            }
+          } finally {
+            /* Wait for the pipe output threads to be done, to make sure that we
+            * do not finish the `run` task before *all* output has been
+            * transferred to System.out and System.err.
+            * We do that in a `finally` block so that the stdout and stderr
+            * streams are propagated even if the run finishes with a failure.
+            * `join()` itself does not throw except if the current thread is
+            * interrupted, which is not supposed to happen (if it does happen,
+            * the interrupted exception will shadow any error from the run).
+            */
+            for (pipeOutputThread <- pipeOutputThreads)
+              pipeOutputThread.join()
           }
-
-        try {
-          val run = env.start(input, config)
-
-          enhanceNotInstalledException(resolvedScoped.value, log) {
-            Await.result(run.future, Duration.Inf)
-          }
-        } finally {
-          /* Wait for the pipe output threads to be done, to make sure that we
-           * do not finish the `run` task before *all* output has been
-           * transferred to System.out and System.err.
-           * We do that in a `finally` block so that the stdout and stderr
-           * streams are propagated even if the run finishes with a failure.
-           * `join()` itself does not throw except if the current thread is
-           * interrupted, which is not supposed to happen (if it does happen,
-           * the interrupted exception will shadow any error from the run).
-           */
-          for (pipeOutputThread <- pipeOutputThreads)
-            pipeOutputThread.join()
         }
+        EmulateForeground(handle)
       },
 
       runMain := {

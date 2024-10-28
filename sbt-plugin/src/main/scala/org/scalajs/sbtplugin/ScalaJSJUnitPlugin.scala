@@ -12,7 +12,7 @@
 
 package org.scalajs.sbtplugin
 
-import sbt._
+import sbt.{ given, _ }
 import sbt.Keys._
 
 object ScalaJSJUnitPlugin extends AutoPlugin {

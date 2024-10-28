@@ -1,6 +1,6 @@
 package build
 
-import sbt._
+import sbt.{ given, _ }
 import Keys._
 
 /** Settings to prevent projects from being exported to IDEs. */
