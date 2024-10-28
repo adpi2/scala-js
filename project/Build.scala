@@ -47,11 +47,15 @@ object ExposedValues extends AutoPlugin {
 
     val cross213ScalaVersions: SettingKey[Seq[String]] =
       settingKey("an ordered sequence of 2.13.x versions with which we build (most recent last)")
+    val cross3ScalaVersions: SettingKey[Seq[String]] =
+      settingKey("an ordered sequence of 3.x versions with which we build (most recent last)")
 
     val default212ScalaVersion: SettingKey[String] =
       settingKey("the default Scala 2.12.x version for this build (derived from cross212ScalaVersions)")
     val default213ScalaVersion: SettingKey[String] =
       settingKey("the default Scala 2.13.x version for this build (derived from cross213ScalaVersions)")
+    val default3ScalaVersion: SettingKey[String] =
+      settingKey("the default Scala 3.x version for this build (derived from cross213ScalaVersions)")
 
     val enableMinifyEverywhere: SettingKey[Boolean] =
       settingKey("force usage of the `minify` option of the linker in all contexts (fast and full)")
@@ -364,8 +368,10 @@ object Build {
   import ExposedValues.autoImport.{
     cross212ScalaVersions,
     cross213ScalaVersions,
+    cross3ScalaVersions,
     default212ScalaVersion,
-    default213ScalaVersion
+    default213ScalaVersion,
+    default3ScalaVersion
   }
 
   import MyScalaJSPlugin.{
@@ -484,6 +490,7 @@ object Build {
   val commonSettings = Seq(
       organization := "org.scala-js",
       version := scalaJSVersion,
+      Compile / doc / sources := Seq.empty,
 
       normalizedName ~= {
         _.replace("scala.js", "scalajs").replace("scala-js", "scalajs")
@@ -973,9 +980,11 @@ object Build {
         "2.13.12",
         "2.13.13",
       ),
+      cross3ScalaVersions := Seq("3.3.3"),
 
       default212ScalaVersion := cross212ScalaVersions.value.last,
       default213ScalaVersion := cross213ScalaVersions.value.last,
+      default3ScalaVersion := cross3ScalaVersions.value.last,
 
       // JDK version we are running with
       javaVersion in Global := {
@@ -1278,7 +1287,7 @@ object Build {
           BuildInfoKey.map(previousLibsTask.taskValue) {
             case (_, v) => "previousLibs" -> v
           },
-          BuildInfoKey.map((LocalProject("javalib") / Compile / packageMinilib): TaskKey[File]) {
+          BuildInfoKey.map(LocalProject("javalib") / Compile / packageMinilib: TaskKey[File]) {
             case (_, v) => "minilib" -> v.getAbsolutePath
           },
           BuildInfoKey.map((LocalProject("javalib") / Compile / packageBin): TaskKey[HashedVirtualFileRef]) {
@@ -1409,16 +1418,16 @@ object Build {
       name := "Scala.js sbt plugin",
       normalizedName := "sbt-scalajs",
       sbtPlugin := true,
-      defaultScalaVersionOnlySettings,
-      sbtVersion := "1.0.0",
+      scalaVersion := "3.3.3",
+      // sbtVersion := "1.0.0",
       scalaBinaryVersion :=
         CrossVersion.binaryScalaVersion(scalaVersion.value),
       previousArtifactSetting,
       // mimaBinaryIssueFilters ++= BinaryIncompatibilities.SbtPlugin,
 
-      addSbtPlugin("org.portable-scala" % "sbt-platform-deps" % "1.0.2"),
-      libraryDependencies += "org.scala-js" %% "scalajs-js-envs" % "1.4.0",
-      libraryDependencies += "org.scala-js" %% "scalajs-env-nodejs" % "1.4.0",
+      // addSbtPlugin("org.portable-scala" % "sbt-platform-deps" % "1.0.2"),
+      libraryDependencies += "org.scala-js" %% "scalajs-js-envs" % "1.4.0" cross CrossVersion.for3Use2_13,
+      libraryDependencies += "org.scala-js" %% "scalajs-env-nodejs" % "1.4.0" cross CrossVersion.for3Use2_13,
 
       scriptedLaunchOpts += "-Dplugin.version=" + version.value,
 
@@ -1480,7 +1489,7 @@ object Build {
 
         sbtJars.map(_.data -> docUrl).toMap
       }
-  ).dependsOn(linkerInterface.v2_12, testAdapter.v2_12)
+  ).dependsOn(linkerInterface.v3, testAdapter.v3)
 
   lazy val delambdafySetting = {
     scalacOptions ++= (
